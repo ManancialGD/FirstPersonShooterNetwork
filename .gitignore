@@ -28,6 +28,9 @@
 # Visual Studio cache directory
 .vs/
 
+# Visual Studio Code cache directory
+.vscode/
+
 # Gradle cache directory
 .gradle/
 
@@ -73,3 +76,11 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Text Mesh Pro
+/[Aa]ssets/[Tt]ext[Mm]esh [Pp]ro/*
+
+/[Aa]ssets/[Tt]extures/*
+/[Aa]ssets/[Mm]odels/*
+/[Aa]ssets/[Aa]nimations/*
+
