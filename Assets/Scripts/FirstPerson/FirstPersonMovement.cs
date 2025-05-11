@@ -51,7 +51,7 @@ public class FirstPersonMovement : MonoBehaviour
     public bool IsGrounded => isGrounded;
     public float MaxSpeed => maxSpeed;
     public Vector2 MovementInput => moveAction.action.ReadValue<Vector2>();
-    
+
     private bool jumpCooldown = false;
     private Coroutine waitForGround;
 
@@ -60,38 +60,6 @@ public class FirstPersonMovement : MonoBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
-    /// <summary>
-    /// Called every frame.
-    /// Handles input and check for ground.
-    /// </summary>
-    public void UpdateInputs()
-    {
-        if (moveAction != null)
-            playerInput = moveAction.action.ReadValue<Vector2>().normalized;
-
-        GroundCheck();
-
-        if (jumpAction.action.IsPressed())
-        {
-            if (isGrounded)
-            {
-                PerformJump();
-            }
-            else
-            {
-                if (waitForGround != null)
-                {
-                    StopCoroutine(waitForGround);
-                }
-                waitForGround = StartCoroutine(WaitForGroundJump());
-            }
-        }
-    }
-
-    /// <summary>
-    /// Called in fixed update.
-    /// Will gather the force and apply it to the rigidbody.
-    /// </summary>
     public void UpdateMovement()
     {
         force = Vector3.zero;
@@ -112,18 +80,44 @@ public class FirstPersonMovement : MonoBehaviour
     /// </summary>
     private void MovePlayer()
     {
+        if (moveAction != null)
+            playerInput = moveAction.action.ReadValue<Vector2>().normalized;
+
+        GroundCheck();
+
+        if (jumpAction.action.triggered)
+        {
+            if (isGrounded)
+            {
+                PerformJump();
+            }
+            else
+            {
+                if (waitForGround != null)
+                {
+                    StopCoroutine(waitForGround);
+                }
+                waitForGround = StartCoroutine(WaitForGroundJump());
+            }
+        }
+
         Vector3 wishDir = GetWishDirection();
         float wishSpeed = playerInput.magnitude * maxSpeed;
 
         if (isGrounded && !jumpCooldown)
         {
-            ApplyFriction();
             Accelerate(wishDir, wishSpeed, accelerate);
         }
         else
         {
             AirAccelerate(wishDir, wishSpeed, airAccelerate);
         }
+    }
+
+    private void Update()
+    {
+        if (isGrounded && !jumpCooldown)
+            ApplyFriction();
     }
 
     // //           // //
@@ -151,7 +145,7 @@ public class FirstPersonMovement : MonoBehaviour
         if (speed < 0.001f) return;
 
         float control = speed < stopSpeed ? stopSpeed : speed;
-        float drop = control * friction * Time.fixedDeltaTime;
+        float drop = control * friction * Time.deltaTime;
         float newSpeed = Mathf.Max(speed - drop, 0);
         float scale = newSpeed / speed;
 
@@ -172,7 +166,7 @@ public class FirstPersonMovement : MonoBehaviour
 
         if (addSpeed <= 0) return;
 
-        float accelSpeed = accel * Time.fixedDeltaTime * wishSpeed;
+        float accelSpeed = accel * Time.deltaTime * wishSpeed;
         accelSpeed = Mathf.Min(accelSpeed, addSpeed);
 
         force += wishDir * accelSpeed;
@@ -193,7 +187,7 @@ public class FirstPersonMovement : MonoBehaviour
 
         if (addSpeed <= 0) return;
 
-        float accelSpeed = accel * Time.fixedDeltaTime * wishSpd;
+        float accelSpeed = accel * Time.deltaTime * wishSpd;
         accelSpeed = Mathf.Min(accelSpeed, addSpeed);
 
         force += wishDir * accelSpeed;

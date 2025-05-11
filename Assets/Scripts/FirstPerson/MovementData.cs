@@ -1,7 +1,8 @@
+using System;
 using Unity.Netcode;
 using UnityEngine;
 
-[System.Serializable]
+[Serializable]
 public class MovementData : INetworkSerializable
 {
     public int tick;

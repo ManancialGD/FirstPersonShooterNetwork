@@ -26,7 +26,7 @@ public class FirstPersonSkin : MonoBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
-    public void InitiateClient()
+    public void InitiateLocal()
     {
         if (clientMeshes != null && clientMeshes.Length > 0)
         {
@@ -46,7 +46,7 @@ public class FirstPersonSkin : MonoBehaviour
         }
     }
 
-    public void InitiateServer()
+    public void InitiateOther()
     {
         if (clientMeshes != null && clientMeshes.Length > 0)
         {

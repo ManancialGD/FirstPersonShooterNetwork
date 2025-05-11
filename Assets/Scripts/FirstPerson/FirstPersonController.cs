@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using Unity.Cinemachine;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(FirstPersonCamera), typeof(FirstPersonMovement), typeof(FirstPersonSkin))]
 public class FirstPersonController : NetworkBehaviour
@@ -33,11 +32,11 @@ public class FirstPersonController : NetworkBehaviour
 
         if (IsOwner)
         {
-            skinController.InitiateClient();
+            skinController.InitiateLocal();
         }
         else
         {
-            skinController.InitiateServer();
+            skinController.InitiateOther();
         }
     }
 
@@ -46,16 +45,8 @@ public class FirstPersonController : NetworkBehaviour
         if (!IsClient || !IsOwner) return;
 
         cameraController.UpdateView();
-        movementController.UpdateInputs();
         skinController.UpdateSkin();
         skinController.UpdateAnimation();
-
-    }
-
-    private void FixedUpdate()
-    {
-        if (!IsClient || !IsOwner) return;
         movementController.UpdateMovement();
     }
-
 }
