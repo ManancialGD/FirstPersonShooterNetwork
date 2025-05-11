@@ -13,14 +13,59 @@ public class FirstPersonSkin : MonoBehaviour
     [SerializeField]
     private float animLerpValue = 10f;
 
+    [SerializeField]
+    private Renderer[] clientMeshes;
+
+    [SerializeField]
+    private Renderer[] serverMeshes;
+
     private Rigidbody rb;
 
-
-    void Awake()
+    private void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        anim = GetComponentInChildren<Animator>();
     }
+
+    public void InitiateClient()
+    {
+        if (clientMeshes != null && clientMeshes.Length > 0)
+        {
+            foreach (var mesh in clientMeshes)
+            {
+                mesh.gameObject.SetActive(true);
+                mesh.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+        }
+
+        if (serverMeshes != null && serverMeshes.Length > 0)
+        {
+            foreach (var mesh in serverMeshes)
+            {
+                mesh.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+            }
+        }
+    }
+
+    public void InitiateServer()
+    {
+        if (clientMeshes != null && clientMeshes.Length > 0)
+        {
+            foreach (var mesh in clientMeshes)
+            {
+                mesh.gameObject.SetActive(false);
+                mesh.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+        }
+
+        if (serverMeshes != null && serverMeshes.Length > 0)
+        {
+            foreach (var mesh in serverMeshes)
+            {
+                mesh.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            }
+        }
+    }
+
     public void UpdateSkin()
     {
         if (cam != null && mesh != null)
@@ -34,7 +79,7 @@ public class FirstPersonSkin : MonoBehaviour
     public void UpdateAnimation()
     {
         if (anim == null || cam == null || rb == null) return;
-        
+
         Vector3 flatForward = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
         Vector3 flatRight = Vector3.ProjectOnPlane(cam.transform.right, Vector3.up).normalized;
 

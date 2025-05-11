@@ -48,6 +48,10 @@ public class FirstPersonMovement : MonoBehaviour
     private Vector3 groundNormal;
     private Vector3 force;
 
+    public bool IsGrounded => isGrounded;
+    public float MaxSpeed => maxSpeed;
+    public Vector2 MovementInput => moveAction.action.ReadValue<Vector2>();
+    
     private bool jumpCooldown = false;
     private Coroutine waitForGround;
 
