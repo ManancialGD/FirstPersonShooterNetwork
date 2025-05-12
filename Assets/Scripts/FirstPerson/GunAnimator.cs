@@ -1,6 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.VFX;
 
 public class GunAnimator : MonoBehaviour
 {
@@ -16,6 +17,9 @@ public class GunAnimator : MonoBehaviour
     [SerializeField] private Transform gunSwayRoot;
     [SerializeField] private InputActionReference lookAction;
 
+    [SerializeField] private VisualEffect localMuzzleFlashVFX;
+    [SerializeField] private VisualEffect remoteMuzzleFlashVFX;
+
     private float bobTimer;
 
     private Vector3 bobOriginalPosition;
@@ -23,6 +27,7 @@ public class GunAnimator : MonoBehaviour
 
     private Rigidbody rb;
     private FirstPersonMovement playerMovement;
+    private FirstPersonController playerController;
 
     private void Awake()
     {
@@ -31,17 +36,23 @@ public class GunAnimator : MonoBehaviour
 
         originalPosition = gunHolder.transform.localPosition;
         bobOriginalPosition = gunBobTarget.localPosition;
+        playerController = GetComponent<FirstPersonController>();
     }
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Mouse0) && playerController.IsLocalPlayer)
+        {
+            localMuzzleFlashVFX?.Play();
+
+            Recoil();
+        }
+
+        if (playerController?.IsLocalPlayer == false) return;
+
         MakeSway();
         MakeBob();
 
-        if (Input.GetKeyDown(KeyCode.Mouse0))
-        {
-            Recoil();
-        }
 
         if (Vector3.Distance(gunHolder.transform.localPosition, originalPosition) > 0.01f)
         {
@@ -71,7 +82,7 @@ public class GunAnimator : MonoBehaviour
         Vector3 flatVelocity = Vector3.ClampMagnitude(new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z), playerMovement.MaxSpeed);
         float speed = flatVelocity.magnitude;
 
-        if (speed > 0.1f) // Only bob when moving
+        if (speed > 0.1f && playerMovement.IsGrounded) // Only bob when moving
         {
             bobTimer += Time.deltaTime * bobFrequency * speed * bobSpeedMultiplier;
 

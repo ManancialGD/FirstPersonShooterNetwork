@@ -46,7 +46,7 @@ public class FirstPersonSkin : MonoBehaviour
         }
     }
 
-    public void InitiateOther()
+    public void InitiateRemote()
     {
         if (clientMeshes != null && clientMeshes.Length > 0)
         {

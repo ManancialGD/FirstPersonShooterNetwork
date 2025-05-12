@@ -36,7 +36,7 @@ public class FirstPersonController : NetworkBehaviour
         }
         else
         {
-            skinController.InitiateOther();
+            skinController.InitiateRemote();
         }
     }
 
