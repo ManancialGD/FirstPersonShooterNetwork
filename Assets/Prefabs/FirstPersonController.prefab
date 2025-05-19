@@ -442,7 +442,7 @@ MonoBehaviour:
         weight: 0
     m_Offset: {x: 0, y: 32, z: 0}
     m_MinLimit: -180
-    m_MaxLimit: 180
+    m_MaxLimit: 21
     m_AimAxis: 4
     m_UpAxis: 2
     m_WorldUpType: 0
@@ -1071,8 +1071,8 @@ GameObject:
   - component: {fileID: 3804952452668722599}
   - component: {fileID: 4281491991435776894}
   - component: {fileID: 4950758100058065103}
-  - component: {fileID: 2325091408732464973}
-  - component: {fileID: 4097175813977053243}
+  - component: {fileID: 6737051824940197727}
+  - component: {fileID: 3919578670253916955}
   m_Layer: 0
   m_Name: FirstPersonController
   m_TagString: Untagged
@@ -1123,12 +1123,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 519a9918e8fc95f4dbf23f40486e7426, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
   cameraTarget: {fileID: 6744497679930694718}
   lookAction: {fileID: -5630151704836100654, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   senseX: 1
   senseY: 1
-  maxAngleUp: 70
-  maxAngleDown: 70
+  maxAngleUp: 80
+  maxAngleDown: 80
   invertMouseY: 0
 --- !u!114 &70598484831049946
 MonoBehaviour:
@@ -1156,7 +1157,7 @@ MonoBehaviour:
   cam: {fileID: 4846780033705244235}
   moveAction: {fileID: -1680190386980627800, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   jumpAction: {fileID: -2099379676528639254, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  speedText: {fileID: 0}
+  showSpeed: 0
 --- !u!114 &6874245117877635230
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1169,7 +1170,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01b08410d5ba60240b1c4371a4bedc7d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cam: {fileID: 4846780033705244235}
+  ShowTopMostFoldoutHeaderGroup: 1
+  cam: {fileID: 6744497679930694718}
   mesh: {fileID: 6801075830405632441}
   anim: {fileID: 4938336883866174229}
   animLerpValue: 10
@@ -1285,7 +1287,7 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &2325091408732464973
+--- !u!114 &6737051824940197727
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1298,7 +1300,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  NetworkTransformExpanded: 1
+  NetworkTransformExpanded: 0
   AutoOwnerAuthorityTickOffset: 1
   PositionInterpolationType: 0
   RotationInterpolationType: 0
@@ -1318,9 +1320,9 @@ MonoBehaviour:
   SyncRotAngleX: 1
   SyncRotAngleY: 1
   SyncRotAngleZ: 1
-  SyncScaleX: 0
+  SyncScaleX: 1
   SyncScaleY: 1
-  SyncScaleZ: 0
+  SyncScaleZ: 1
   PositionThreshold: 0.001
   RotAngleThreshold: 0.01
   ScaleThreshold: 0.01
@@ -1331,7 +1333,7 @@ MonoBehaviour:
   SwitchTransformSpaceWhenParented: 0
   Interpolate: 1
   SlerpPosition: 0
---- !u!114 &4097175813977053243
+--- !u!114 &3919578670253916955
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1345,7 +1347,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   NetworkRigidbodyBaseExpanded: 0
-  UseRigidBodyForMotion: 0
+  UseRigidBodyForMotion: 1
   AutoUpdateKinematicState: 1
   AutoSetKinematicOnDespawn: 1
 --- !u!1 &8170430261682300854
@@ -1969,9 +1971,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d962d470efd42e44b85e28c70949a07c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7135978048935637724}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d962d470efd42e44b85e28c70949a07c, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 3072401771795460522}
     - targetCorrespondingSourceObject: {fileID: 7036213049465896255, guid: d962d470efd42e44b85e28c70949a07c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1603625849468490739}
@@ -2107,21 +2106,6 @@ MonoBehaviour:
   - m_Rig: {fileID: 755190898377994628}
     m_Active: 1
   m_Effectors: []
---- !u!114 &3072401771795460522
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5608498835026698033}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e8d0727d5ae3244e3b569694d3912374, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowTopMostFoldoutHeaderGroup: 1
-  TransitionStateInfoList: []
-  m_Animator: {fileID: 5585256614993523959}
 --- !u!4 &6855253182446011226 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -7046222076025773766, guid: d962d470efd42e44b85e28c70949a07c, type: 3}
@@ -2647,9 +2631,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2fed66ae536bc5947ad423b9ffb9dc04, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4631398990700523587}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2fed66ae536bc5947ad423b9ffb9dc04, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1451068866599681411}
   m_SourcePrefab: {fileID: 100100000, guid: 2fed66ae536bc5947ad423b9ffb9dc04, type: 3}
 --- !u!4 &1698746601045995637 stripped
 Transform:
@@ -2731,21 +2712,6 @@ MonoBehaviour:
   - m_Rig: {fileID: 731016637452248353}
     m_Active: 1
   m_Effectors: []
---- !u!114 &1451068866599681411
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6801075830405632441}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e8d0727d5ae3244e3b569694d3912374, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowTopMostFoldoutHeaderGroup: 1
-  TransitionStateInfoList: []
-  m_Animator: {fileID: 4938336883866174229}
 --- !u!4 &7687706499026923732 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -5182772449595777988, guid: 2fed66ae536bc5947ad423b9ffb9dc04, type: 3}

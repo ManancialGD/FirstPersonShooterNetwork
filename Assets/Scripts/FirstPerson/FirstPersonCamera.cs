@@ -1,10 +1,11 @@
 using System;
-using Unity.Cinemachine;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class FirstPersonCamera : MonoBehaviour
+public class FirstPersonCamera : NetworkBehaviour
 {
+    [Header("Camera Settings")]
     [Header("Camera Target")]
     [Tooltip("The target transform the camera will follow and rotate around.")]
     [SerializeField] private Transform cameraTarget;
@@ -21,49 +22,86 @@ public class FirstPersonCamera : MonoBehaviour
 
     [Header("Angle Limits")]
     [Tooltip("Maximum upward angle the camera can rotate.")]
-    [SerializeField] private float maxAngleUp = 15;
+    [SerializeField] private float maxAngleUp = 80;
     [Tooltip("Maximum downward angle the camera can rotate.")]
-    [SerializeField] private float maxAngleDown = 45;
+    [SerializeField] private float maxAngleDown = 80;
 
     [Header("Inversion Settings")]
     [Tooltip("Invert the Y-axis for mouse input.")]
     [SerializeField] private bool invertMouseY = false;
 
+    private float yaw;
+    private float pitch;
+
+    private readonly NetworkVariable<Vector2> networkRotation = new(
+        Vector2.zero,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner
+        );
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+
+        // If not the owner, update rotation from network variable
+        if (!IsOwner)
+        {
+            networkRotation.OnValueChanged += OnRotationChanged;
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+
+        // Unregister the event when despawning to prevent memory leaks.
+        if (!IsOwner)
+        {
+            networkRotation.OnValueChanged -= OnRotationChanged;
+        }
+    }
+
+    private void OnRotationChanged(Vector2 previousValue, Vector2 newValue)
+    {
+        if (!IsOwner)
+        {
+            cameraTarget.localRotation = Quaternion.Euler(newValue.x, newValue.y, 0f);
+        }
+    }
+
     public void UpdateView()
     {
-        Vector2 rotation = Vector2.zero;
+        if (!IsOwner) return;
+
+        if (lookAction == null || cameraTarget == null)
+            return;
+
+        Vector2 input = Vector2.zero;
 
         try
         {
-            rotation = lookAction.action.ReadValue<Vector2>();
+            input = lookAction.action.ReadValue<Vector2>();
         }
         catch (Exception e)
         {
             Debug.LogError("Error reading look input: " + e.Message);
         }
 
-        rotation.x *= senseX * .15f;
-        rotation.y *= senseY * .15f;
+        if (input == Vector2.zero)
+            return;
 
-        rotation.y *= invertMouseY ? 1 : -1;
+        float mouseX = input.x * senseX * 0.15f;
+        float mouseY = input.y * senseY * 0.15f * (invertMouseY ? 1f : -1f);
 
-        cameraTarget.transform.rotation *= Quaternion.AngleAxis(rotation.x * senseX, Vector3.up);
-        cameraTarget.transform.rotation *= Quaternion.AngleAxis(rotation.y * senseY, Vector3.right);
+        yaw += mouseX;
+        pitch += mouseY;
 
-        Vector3 angles = cameraTarget.transform.localRotation.eulerAngles;
-        angles.z = 0;
+        // Clamp vertical rotation
+        pitch = Mathf.Clamp(pitch, -maxAngleDown, maxAngleUp);
 
-        float angle = cameraTarget.transform.localRotation.eulerAngles.x;
+        // Apply rotation: yaw on Y, pitch on X
+        cameraTarget.localRotation = Quaternion.Euler(pitch, yaw, 0f);
 
-        if (angle > 180 && angle < 360 - maxAngleUp)
-        {
-            angles.x = 360 - maxAngleUp;
-        }
-        else if (angle < 180 && angle > maxAngleDown)
-        {
-            angles.x = maxAngleDown;
-        }
-
-        cameraTarget.transform.localRotation = Quaternion.Euler(angles);
+        networkRotation.Value = new Vector2(pitch, yaw);
     }
 }

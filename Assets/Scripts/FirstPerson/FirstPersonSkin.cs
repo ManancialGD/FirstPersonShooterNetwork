@@ -1,10 +1,12 @@
 using Unity.Cinemachine;
+using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 
-public class FirstPersonSkin : MonoBehaviour
+public class FirstPersonSkin : NetworkBehaviour
 {
     [SerializeField]
-    private CinemachineCamera cam;
+    private Transform cam;
 
     [SerializeField]
     private GameObject mesh;
@@ -94,5 +96,8 @@ public class FirstPersonSkin : MonoBehaviour
 
         anim.SetFloat("xInput", Mathf.Lerp(currentXInput, horizontalValue, Time.deltaTime * animLerpValue));
         anim.SetFloat("yInput", Mathf.Lerp(currentYInput, forwardValue, Time.deltaTime * animLerpValue));
+
+        Debug.Log($"Client[{NetworkManager.LocalClientId}] Velocity: {flatVelocity.magnitude}");
+        Debug.Log($"Client[{NetworkManager.LocalClientId}] X: {currentXInput}, Y: {currentYInput}");
     }
 }

@@ -28,7 +28,7 @@ public class FirstPersonMovement : MonoBehaviour
     [SerializeField] private float airAccelerate = 10f;          // Air acceleration - Quake default is 10f
     [SerializeField] private float friction = 4f;                // Ground friction
     [SerializeField] private float stopSpeed = 100f * 0.0254f;   // Stop speed threshold (converted to meters/s)
-    [SerializeField] private float height = 2f;                // Player height (used for ground check)
+    [SerializeField] private float height = 2f;                  // Player height (used for ground check)
     [SerializeField] private float jumpForce = 4f;
     [SerializeField] private float groundCheckDistance = 0.2f;
     [SerializeField] private LayerMask groundMask;
@@ -38,19 +38,15 @@ public class FirstPersonMovement : MonoBehaviour
     [SerializeField] private InputActionReference moveAction;
     [SerializeField] private InputActionReference jumpAction;
 
-    [Header("UI Settings")]
+    [Header("Debug Settings")]
     [SerializeField]
-    private TextMeshProUGUI speedText;
+    private bool showSpeed = false;
 
     private Rigidbody rb;
     private Vector2 playerInput;
     private bool isGrounded;
     private Vector3 groundNormal;
     private Vector3 force;
-
-    public bool IsGrounded => isGrounded;
-    public float MaxSpeed => maxSpeed;
-    public Vector2 MovementInput => moveAction.action.ReadValue<Vector2>();
 
     private bool jumpCooldown = false;
     private Coroutine waitForGround;
@@ -66,12 +62,6 @@ public class FirstPersonMovement : MonoBehaviour
 
         MovePlayer();
         ApplyVelocity();
-
-        if (speedText != null)
-        {
-            Vector3 horizontalVelocity = new(rb.linearVelocity.x, 0, rb.linearVelocity.z);
-            speedText.text = $"{horizontalVelocity.magnitude:F2}m/s";
-        }
     }
 
     /// <summary>
@@ -180,7 +170,7 @@ public class FirstPersonMovement : MonoBehaviour
         // Using the Dot product will add a little bit of speed when going nearly 90 degrees to current velocity.
         // Making when holding 'A' and 'D' while rotating the camera to that direction gaining a little bit of speed.
         // This is what brings the Quake's Air Strafe speed gain exploit.
-        // We will mantain this as a design choice.2
+        // We will mantain this as a design choice.
         float currentSpeed = Vector3.Dot(rb.linearVelocity, wishDir);
 
         float addSpeed = wishSpd - currentSpeed;
@@ -248,13 +238,25 @@ public class FirstPersonMovement : MonoBehaviour
         }
     }
 
-
-
     private void ApplyVelocity()
     {
         if (force.magnitude > 1e-4)
         {
             rb.AddForce(force, ForceMode.Impulse);
+        }
+    }
+
+    // //             // //
+    //     Debugging     //
+    // //             // //
+
+    private void OnGUI()
+    {
+        if (showSpeed)
+        {
+            float speed = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z).magnitude;
+
+            GUI.Label(new Rect(10, 10, 200, 20), $"Speed: {speed:F2} m/s");
         }
     }
 }

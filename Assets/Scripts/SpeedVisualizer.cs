@@ -11,7 +11,7 @@ public class SpeedVisualizer : MonoBehaviour
 
     private void Awake()
     {
-        speedText = GetComponent<TextMeshProUGUI>();
+        speedText = GetComponentInChildren<TextMeshProUGUI>();
     }
 
     private void Start()
@@ -23,7 +23,7 @@ public class SpeedVisualizer : MonoBehaviour
 
     private void Update()
     {
-        if (localPlayerRigidbody != null)
+        if (localPlayerRigidbody != null && speedText != null)
         {
             float speed = new Vector3(localPlayerRigidbody.linearVelocity.x, 0, localPlayerRigidbody.linearVelocity.z).magnitude;
 
@@ -31,7 +31,7 @@ public class SpeedVisualizer : MonoBehaviour
 
             if (sourceUnit)
             {
-                speedS = $"{speed * 0.0254:0.00}i/s";
+                speedS = $"{speed * 39.3701:0.00}i/s";
             }
             else
             {

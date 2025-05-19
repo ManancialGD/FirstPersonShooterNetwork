@@ -42,11 +42,11 @@ public class FirstPersonController : NetworkBehaviour
 
     private void Update()
     {
-        if (!IsClient || !IsOwner) return;
-
         cameraController.UpdateView();
         skinController.UpdateSkin();
         skinController.UpdateAnimation();
-        movementController.UpdateMovement();
+        
+        if (IsOwner)
+            movementController.UpdateMovement();
     }
 }

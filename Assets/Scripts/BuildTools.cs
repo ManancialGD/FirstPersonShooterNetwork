@@ -16,7 +16,7 @@ namespace EditorTools
         private static readonly string gameName = "FirstPersonShooterNetwork";
         private static readonly string exeName = gameName + ".exe";
         private static readonly string windowsGamePath = Path.Combine(windowsBuildPath, exeName);
-        private static string serverArgs = "--server";
+        private static readonly string serverArgs = "--server";
 
         private static void Run(string path, string args)
         {
@@ -53,7 +53,7 @@ namespace EditorTools
             var report = BuildPipeline.BuildPlayer(buildPlayerOptions);
 
             // Output the result of the build​
-            UnityEngine.Debug.Log($"Build ended with status: {report.summary.result}");
+            Debug.Log($"Build ended with status: {report.summary.result}");
 
             // Additional log on the build, looking at report.summary​
             return report.summary.result == BuildResult.Succeeded;
@@ -116,7 +116,7 @@ namespace EditorTools
                 {
                     // Handle exceptions, if any​
                     // This could occur if the process has already exited or you don't have permission to kill it​
-                    UnityEngine.Debug.LogWarning($"Error trying to kill process {process.ProcessName}: {ex.Message}");
+                    Debug.LogWarning($"Error trying to kill process {process.ProcessName}: {ex.Message}");
                 }
             }
         }
