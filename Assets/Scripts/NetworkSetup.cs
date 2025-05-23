@@ -5,10 +5,11 @@ using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using System;
 
-#if UNITY_STANDALONE_WIN
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
 using System.Runtime.InteropServices;
 using System.Linq;
 using System.IO;
+using AOT;
 #endif
 
 public class NetworkSetup : MonoBehaviour
@@ -131,52 +132,55 @@ public class NetworkSetup : MonoBehaviour
         Debug.Log($"Player {clientId} disconnected!");
     }
 
-#if UNITY_STANDALONE_WIN
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool SetWindowText(IntPtr hWnd, string lpString);
 
     [DllImport("user32.dll", SetLastError = true)]
-    static extern bool SetWindowText(IntPtr hWnd, string lpString);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     [DllImport("user32.dll")]
-    static extern IntPtr EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
+    private static extern IntPtr EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
 
-    // Delegate to filter windows
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    private static IntPtr targetWindow = IntPtr.Zero;
+
+    [MonoPInvokeCallback(typeof(EnumWindowsProc))]
+    private static bool EnumWindowCallback(IntPtr hWnd, IntPtr lParam)
+    {
+        uint windowProcessId;
+        GetWindowThreadProcessId(hWnd, out windowProcessId);
+
+        if (windowProcessId == (uint)System.Diagnostics.Process.GetCurrentProcess().Id)
+        {
+            targetWindow = hWnd;
+            return false; // Stop enumerating
+        }
+
+        return true; // Continue enumerating
+    }
 
     private static IntPtr FindWindowByProcessId(uint processId)
     {
-        IntPtr windowHandle = IntPtr.Zero;
-
-        EnumWindows((hWnd, lParam) =>
-        {
-            uint windowProcessId;
-            GetWindowThreadProcessId(hWnd, out windowProcessId);
-            if (windowProcessId == processId)
-            {
-                windowHandle = hWnd;
-                return false; // Found the window, stop enumerating
-            }
-            return true; // Continue enumerating
-        }, IntPtr.Zero);
-
-        return windowHandle;
+        targetWindow = IntPtr.Zero;
+        EnumWindows(EnumWindowCallback, IntPtr.Zero);
+        return targetWindow;
     }
 
-    static void SetWindowTitle(string title)
+    private static void SetWindowTitle(string title)
     {
-#if !UNITY_EDITOR
-            uint processId = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
-            IntPtr hWnd = FindWindowByProcessId(processId);
+        uint processId = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+        IntPtr hWnd = FindWindowByProcessId(processId);
 
-            if (hWnd != IntPtr.Zero)
-            {
-                SetWindowText(hWnd, title);
-            }
-#endif
+        if (hWnd != IntPtr.Zero)
+        {
+            SetWindowText(hWnd, title);
+        }
     }
+
 #else
-    static void SetWindowTitle(string title) { }
+    private static void SetWindowTitle(string title) { }
 #endif
 }

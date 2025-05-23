@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using Unity.Cinemachine;
+using Unity.Netcode;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -34,17 +35,12 @@ public class FirstPersonMovement : MonoBehaviour
     [SerializeField] private LayerMask groundMask;
     [SerializeField] private CinemachineCamera cam;
 
-    [Header("Input Settings")]
-    [SerializeField] private InputActionReference moveAction;
-    [SerializeField] private InputActionReference jumpAction;
-
     [Header("Debug Settings")]
     [SerializeField]
     private bool showSpeed = false;
 
     private Rigidbody rb;
-    private Vector2 playerInput;
-    private bool isGrounded;
+    public bool IsGrounded { get; private set; }
     private Vector3 groundNormal;
     private Vector3 force;
 
@@ -56,57 +52,55 @@ public class FirstPersonMovement : MonoBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
-    public void UpdateMovement()
+    public void UpdateMovement(Vector2 moveInput, float deltaTime)
     {
         force = Vector3.zero;
 
-        MovePlayer();
+        CalculateMovement(moveInput, deltaTime);
         ApplyVelocity();
     }
 
-    /// <summary>
-    /// Facade for the movement system.
-    /// This will handle the player movement and friction.
-    /// </summary>
-    private void MovePlayer()
+    public void Jump()
     {
-        if (moveAction != null)
-            playerInput = moveAction.action.ReadValue<Vector2>().normalized;
-
-        GroundCheck();
-
-        if (jumpAction.action.triggered)
+        if (IsGrounded)
         {
-            if (isGrounded)
-            {
-                PerformJump();
-            }
-            else
-            {
-                if (waitForGround != null)
-                {
-                    StopCoroutine(waitForGround);
-                }
-                waitForGround = StartCoroutine(WaitForGroundJump());
-            }
-        }
-
-        Vector3 wishDir = GetWishDirection();
-        float wishSpeed = playerInput.magnitude * maxSpeed;
-
-        if (isGrounded && !jumpCooldown)
-        {
-            Accelerate(wishDir, wishSpeed, accelerate);
+            PerformJump();
         }
         else
         {
-            AirAccelerate(wishDir, wishSpeed, airAccelerate);
+            if (waitForGround != null)
+            {
+                StopCoroutine(waitForGround);
+            }
+            waitForGround = StartCoroutine(WaitForGroundJump());
+        }
+
+    }
+
+    private void CalculateMovement(Vector2 moveInput, float deltaTime)
+    {
+        Vector3 wishDir = GetWishDirection(moveInput);
+
+        float wishSpeed = moveInput.magnitude * maxSpeed;
+
+        if (IsGrounded && !jumpCooldown)
+        {
+            Accelerate(wishDir, wishSpeed, accelerate, deltaTime);
+        }
+        else
+        {
+            AirAccelerate(wishDir, wishSpeed, airAccelerate, deltaTime);
         }
     }
 
     private void Update()
     {
-        if (isGrounded && !jumpCooldown)
+        GroundCheck();
+    }
+
+    private void FixedUpdate()
+    {
+        if (IsGrounded && !jumpCooldown)
             ApplyFriction();
     }
 
@@ -114,7 +108,7 @@ public class FirstPersonMovement : MonoBehaviour
     //    MOVEMENT     //
     // //           // //
 
-    private Vector3 GetWishDirection()
+    private Vector3 GetWishDirection(Vector2 moveInput)
     {
         // Convert input to world space relative to camera
         Transform camTransform = cam.transform;
@@ -122,7 +116,7 @@ public class FirstPersonMovement : MonoBehaviour
         Vector3 forward = Vector3.ProjectOnPlane(camTransform.forward, groundNormal).normalized;
         Vector3 right = Vector3.ProjectOnPlane(camTransform.right, groundNormal).normalized;
 
-        return (forward * playerInput.y + right * playerInput.x).normalized;
+        return (forward * moveInput.y + right * moveInput.x).normalized;
     }
 
     private void ApplyFriction()
@@ -135,7 +129,7 @@ public class FirstPersonMovement : MonoBehaviour
         if (speed < 0.001f) return;
 
         float control = speed < stopSpeed ? stopSpeed : speed;
-        float drop = control * friction * Time.deltaTime;
+        float drop = control * friction * Time.fixedDeltaTime;
         float newSpeed = Mathf.Max(speed - drop, 0);
         float scale = newSpeed / speed;
 
@@ -144,7 +138,7 @@ public class FirstPersonMovement : MonoBehaviour
         rb.linearVelocity = velocity;
     }
 
-    private void Accelerate(Vector3 wishDir, float wishSpeed, float accel)
+    private void Accelerate(Vector3 wishDir, float wishSpeed, float accel, float deltaTime)
     {
         // Quake does Vector3.Dot(rb.linearVelocity, wishDir);
         // But this cause a speed gain when spamming 'A' and 'D' while going forward.
@@ -156,13 +150,13 @@ public class FirstPersonMovement : MonoBehaviour
 
         if (addSpeed <= 0) return;
 
-        float accelSpeed = accel * Time.deltaTime * wishSpeed;
+        float accelSpeed = accel * deltaTime * wishSpeed;
         accelSpeed = Mathf.Min(accelSpeed, addSpeed);
 
         force += wishDir * accelSpeed;
     }
 
-    private void AirAccelerate(Vector3 wishDir, float wishSpeed, float accel)
+    private void AirAccelerate(Vector3 wishDir, float wishSpeed, float accel, float deltaTime)
     {
         float wishSpd = Mathf.Min(wishSpeed, 30f * 0.0254f); // Quake air speed cap is 30, we convert to meters/s
 
@@ -177,7 +171,7 @@ public class FirstPersonMovement : MonoBehaviour
 
         if (addSpeed <= 0) return;
 
-        float accelSpeed = accel * Time.deltaTime * wishSpd;
+        float accelSpeed = accel * deltaTime * wishSpd;
         accelSpeed = Mathf.Min(accelSpeed, addSpeed);
 
         force += wishDir * accelSpeed;
@@ -188,7 +182,7 @@ public class FirstPersonMovement : MonoBehaviour
     // //           // //
     private void PerformJump()
     {
-        if (isGrounded && !jumpCooldown)
+        if (IsGrounded && !jumpCooldown)
         {
             jumpCooldown = true;
             Invoke(nameof(ResetJumpCooldown), 0.1f);
@@ -205,7 +199,7 @@ public class FirstPersonMovement : MonoBehaviour
         while (elapsedTime < 0.05f)
         {
             elapsedTime += Time.deltaTime;
-            if (isGrounded)
+            if (IsGrounded)
             {
                 PerformJump();
             }
@@ -228,12 +222,12 @@ public class FirstPersonMovement : MonoBehaviour
 
         if (Physics.Raycast(start, Vector3.down, out RaycastHit hit, groundCheckDistance, groundMask))
         {
-            isGrounded = true;
+            IsGrounded = true;
             groundNormal = hit.normal;
         }
         else
         {
-            isGrounded = false;
+            IsGrounded = false;
             groundNormal = Vector3.up;
         }
     }

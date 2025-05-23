@@ -96,8 +96,5 @@ public class FirstPersonSkin : NetworkBehaviour
 
         anim.SetFloat("xInput", Mathf.Lerp(currentXInput, horizontalValue, Time.deltaTime * animLerpValue));
         anim.SetFloat("yInput", Mathf.Lerp(currentYInput, forwardValue, Time.deltaTime * animLerpValue));
-
-        Debug.Log($"Client[{NetworkManager.LocalClientId}] Velocity: {flatVelocity.magnitude}");
-        Debug.Log($"Client[{NetworkManager.LocalClientId}] X: {currentXInput}, Y: {currentYInput}");
     }
 }

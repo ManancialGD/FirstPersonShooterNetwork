@@ -79,7 +79,7 @@ public class GunAnimator : MonoBehaviour
     private void MakeBob()
     {
         // Get horizontal velocity only (no jumping impact)
-        Vector3 flatVelocity = Vector3.ClampMagnitude(new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z), playerMovement.MaxSpeed);
+        Vector3 flatVelocity = new(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
         float speed = flatVelocity.magnitude;
 
         if (speed > 0.1f && playerMovement.IsGrounded) // Only bob when moving

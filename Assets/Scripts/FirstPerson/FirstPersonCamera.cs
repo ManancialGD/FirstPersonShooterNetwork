@@ -69,29 +69,16 @@ public class FirstPersonCamera : NetworkBehaviour
         }
     }
 
-    public void UpdateView()
+    public void UpdateView(Vector2 lookInput)
     {
         if (!IsOwner) return;
+        if (cameraTarget == null) return;
 
-        if (lookAction == null || cameraTarget == null)
+        if (lookInput == Vector2.zero)
             return;
 
-        Vector2 input = Vector2.zero;
-
-        try
-        {
-            input = lookAction.action.ReadValue<Vector2>();
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("Error reading look input: " + e.Message);
-        }
-
-        if (input == Vector2.zero)
-            return;
-
-        float mouseX = input.x * senseX * 0.15f;
-        float mouseY = input.y * senseY * 0.15f * (invertMouseY ? 1f : -1f);
+        float mouseX = lookInput.x * senseX * 0.15f;
+        float mouseY = lookInput.y * senseY * 0.15f * (invertMouseY ? 1f : -1f);
 
         yaw += mouseX;
         pitch += mouseY;

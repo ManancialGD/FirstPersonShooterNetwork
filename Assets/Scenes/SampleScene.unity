@@ -1180,7 +1180,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66d121cad9e693c4899291a03c286b10, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isServer: 0
+  isServer: 1
   playerSpawnLocations:
   - {fileID: 694874326}
   - {fileID: 995567647}

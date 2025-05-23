@@ -12,7 +12,7 @@ Author : Breno Pinto 22308986
 - **FirstPersonCamera**: Manages camera rotation, sensitivity, and network synchronization.
 - **FirstPersonSkin**: Handles mesh visibility, animation, and local/remote differentiation.
 
-## Movement
+## Networked Movement System
 
 Movement is inspired by Quake, with air-strafing and bunny hopping.  
 See [Quake Source code](https://github.com/id-Software/Quake/blob/master/WinQuake/sv_user.c#L207) for reference.
@@ -21,11 +21,129 @@ See [Quake Source code](https://github.com/id-Software/Quake/blob/master/WinQuak
 Movement should be server sided with client side prediction.
 Also, this will come with an AntiCheat, checking if the movement is checking based on the input.
 
-### Client side prediction
-Not implemented yet.
+### Client-Side Prediction Implementation
 
-### AntiCheat
-Not implemented yet.
+What's Client-Side prediction?
+Basicly, the movement of the character is server sided, meaning only the server can move it.
+<br>So, in the client we send a message to the server "Hey, move me to this direction : x,y"
+<br>Then the server moves it and send a message back to the client "Hey, I moved you, now you're position is x,y"
+
+Problem: **LAG**
+
+Since it takes time to the message to go to the server and back to the client,
+the input lag is big.
+
+Fix: **Client side prediction!**
+
+We will send a message to the server, then move in the client!
+Then the server will also move in the sever and send to other clients.
+
+But then we have this problem: What if the position of the client is diferent from the server (maybe physics problem, maybe cheats?)
+
+If the client is predicting, and the server is authoritative, then we need to make sure the client can “roll back” and reapply its unconfirmed inputs if there's a mismatch.
+
+Let’s say:
+
+- You predict moving right (→) for 3 frames.
+- Server tells you: “You're actually at X, not where you thought.”
+- You roll back to X, then replay those 3 inputs to catch up.
+
+That’s where the InputBuffer comes in.
+
+It's just a array that we access cricularly
+
+```cs
+private const int BUFFER_SIZE = 128;
+private readonly InputEntry[] inputBuffer = new InputEntry[BUFFER_SIZE];
+private int bufferHead = 0;  // Write position
+private int bufferTail = 0;  // Read position
+private int bufferCount = 0;
+```
+
+This "rollback" is actually reconciliation, or rubber banding.
+
+To Reconcile we check if the difference on the current position and the server position is greater then a velue
+
+```cs
+if (Vector3.Distance(transform.position, serverPosition) > 0.1f)
+{
+    transform.position = serverPosition;
+
+    // Replay all remaining inputs in order
+    int current = bufferTail;
+    for (int i = 0; i < bufferCount; i++)
+    {
+        ref InputEntry entry = ref inputBuffer[current];
+        if (entry.isJump)
+        {
+            movementController.Jump();
+        }
+        else
+        {
+            movementController.UpdateMovement(entry.moveInput, entry.deltaTime);
+        }
+        current = (current + 1) % BUFFER_SIZE;
+    }
+}
+```
+
+So now we have another problem...
+it's too jittery.
+It's jittery because of: The server doesn't predict the character movement,
+making it move in the client but stop and come back to the start when the server starts moving...
+
+to make this jitter more consistent, we should move in a fixed time.
+So we will move in `FixedUpdate` rather then `Update`.
+We will also add interpolation on the client for the rigid body.
+
+Another thing I noticed is that we shouldn't just set the client position to the servers.
+we should take the last known position to be verified correct, then move it. Like this:
+
+```cs
+int rollbackIndex = FindInputIndexByTick(serverTick);
+if (rollbackIndex >= 0)
+    transform.position = inputBuffer[rollbackIndex].predictedPosition;
+else
+    transform.position = serverPosition;
+```
+
+then, apply the inputs again, to get to where we should be.
+
+```cs
+int current = bufferTail;
+for (int i = 0; i < bufferCount; i++)
+{
+    ref InputEntry entry = ref inputBuffer[current];
+
+    entry.predictedPosition = transform.position;
+
+    if (entry.isJump)
+        movementController.Jump();
+    else
+        movementController.UpdateMovement(entry.moveInput, Time.fixedDeltaTime);
+
+    current = (current + 1) % BUFFER_SIZE;
+}
+```
+
+After a while of testing, like this the client needs to reconcile several times per second, like 30 times.
+Wich is reeeally jittery.
+
+Now, when adding interpolation for only the clients,
+It reconciles a loot less then whithout it!
+Of course, the movement now isn't as snappy, but it's smoothier.
+
+```cs
+private void Start()
+{
+    ...
+    if (IsClient)
+    {
+        if (TryGetComponent<Rigidbody>(out var rb))
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+    }
+}
+```
 
 ## Camera
 
@@ -119,3 +237,4 @@ by zweek on YouTube
 ## Networking
 - [What goes into making a multiplayer FPS game?](https://www.youtube.com/watch?v=JOH5NEErS4Y&ab_channel=RiftDivision)
 by Rift Division
+- [Gabriel Gambetta's Prediction Guide](https://www.gabrielgambetta.com/client-side-prediction-server-reconciliation.html)
