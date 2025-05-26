@@ -26,6 +26,14 @@ public class FirstPersonSkin : NetworkBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        if (anim == null)
+        {
+            Debug.LogError("Animator component is not assigned in FirstPersonSkin.");
+        }
+        if (cam == null)
+        {
+            Debug.LogError("Camera transform is not assigned in FirstPersonSkin.");
+        }
     }
 
     public void InitiateLocal()
@@ -80,8 +88,6 @@ public class FirstPersonSkin : NetworkBehaviour
 
     public void UpdateAnimation()
     {
-        if (anim == null || cam == null || rb == null) return;
-
         Vector3 flatForward = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
         Vector3 flatRight = Vector3.ProjectOnPlane(cam.transform.right, Vector3.up).normalized;
 

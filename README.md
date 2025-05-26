@@ -128,22 +128,82 @@ for (int i = 0; i < bufferCount; i++)
 
 After a while of testing, like this the client needs to reconcile several times per second, like 30 times.
 Wich is reeeally jittery.
+We could add interpolation to the movement, or damping to the camera.
+But both just make the movement laggy and not snappy.
 
-Now, when adding interpolation for only the clients,
-It reconciles a loot less then whithout it!
-Of course, the movement now isn't as snappy, but it's smoothier.
-
+First, let's fix this problem:
 ```cs
-private void Start()
+if (Vector3.Distance(transform.position, serverPosition) > 0.1f)
+```
+we're checking he current position to the server position that is delayed.
+In the meantime, the movement updated in the client, we shouldn't check the current position,
+but the position we were at the moment.
+Aditionally we will check if the velocity is the same aswell.
+```cs
+InputEntry inputEntry = default;
+bool found = false;
+int currentIndex = bufferTail;
+
+// Iterate through valid entries to find the serverTick
+for (int i = 0; i < bufferCount; i++)
 {
-    ...
-    if (IsClient)
+    if (inputBuffer[currentIndex].tick == serverTick)
     {
-        if (TryGetComponent<Rigidbody>(out var rb))
-            rb.interpolation = RigidbodyInterpolation.Interpolate;
+        inputEntry = inputBuffer[currentIndex];
+        found = true;
+        break;
+    }
+    currentIndex = (currentIndex + 1) % BUFFER_SIZE;
+}
+
+if (!found)
+{
+    Debug.LogWarning($"Reconcile failed: No input entry found for tick {serverTick}");
+    return;
+}
+
+if (Vector3.Distance(inputEntry.predictedPosition, serverPosition) > 1f)
+{
+    Debug.Log("We need to reconcile state!");
+
+    // Remove acknowledged inputs
+    while (bufferCount > 0 && inputBuffer[bufferTail].tick <= serverTick)
+    {
+        bufferTail = (bufferTail + 1) % BUFFER_SIZE;
+        bufferCount--;
+    }
+
+    // Restore state from the server's position
+    transform.position = serverPosition;
+    rb.linearVelocity = inputEntry.velocity;
+
+    // Replay unacknowledged inputs
+    int current = bufferTail;
+    for (int i = 0; i < bufferCount; i++)
+    {
+        ref InputEntry entry = ref inputBuffer[current];
+        rb.linearVelocity = entry.velocity;
+
+        if (entry.isJump)
+            movementController.Jump();
+        else
+            movementController.UpdateMovement(entry.moveInput, Time.fixedDeltaTime);
+
+        // Update predicted state after applying each input
+        entry.predictedPosition = transform.position;
+        entry.velocity = rb.linearVelocity;
+
+        current = (current + 1) % BUFFER_SIZE;
     }
 }
 ```
+
+We will also increase the distance check from 0.1 to 1.
+
+Now, we're not reconciling as much!
+Only when there is illegal movement.
+
+We still have a bit of jitter in the movement, and it's not reconciliation.
 
 ## Camera
 

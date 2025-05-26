@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Assertions;
 using Unity.Cinemachine;
+using System.Linq;
 
 [RequireComponent(typeof(FirstPersonCamera), typeof(FirstPersonMovement), typeof(FirstPersonSkin))]
 public class FirstPersonController : NetworkBehaviour
@@ -15,10 +16,11 @@ public class FirstPersonController : NetworkBehaviour
     private FirstPersonCamera cameraController;
     private FirstPersonMovement movementController;
     private FirstPersonSkin skinController;
+    private Rigidbody rb;
 
     private uint currentTick = 0;
 
-    private const int BUFFER_SIZE = 128;
+    private const int BUFFER_SIZE = 4096;
 
     private readonly InputEntry[] inputBuffer = new InputEntry[BUFFER_SIZE];
     private int bufferHead = 0;  // next write position
@@ -30,6 +32,7 @@ public class FirstPersonController : NetworkBehaviour
         cameraController = GetComponentInChildren<FirstPersonCamera>();
         movementController = GetComponent<FirstPersonMovement>();
         skinController = GetComponent<FirstPersonSkin>();
+        rb = GetComponent<Rigidbody>();
 
         Assert.IsNotNull(moveAction);
         Assert.IsNotNull(lookAction);
@@ -56,12 +59,6 @@ public class FirstPersonController : NetworkBehaviour
         else
         {
             skinController.InitiateRemote();
-        }
-
-        if (IsClient)
-        {
-            if (TryGetComponent<Rigidbody>(out var rb))
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
         }
     }
 
@@ -98,7 +95,8 @@ public class FirstPersonController : NetworkBehaviour
             tick = currentTick,
             moveInput = moveInput,
             isJump = didJump,
-            predictedPosition = transform.position
+            predictedPosition = transform.position,
+            velocity = rb.linearVelocity,
         });
 
         if (didJump)
@@ -151,56 +149,62 @@ public class FirstPersonController : NetworkBehaviour
 
     private void ReconcileState(Vector3 serverPosition, uint serverTick)
     {
-        // Remove all inputs up to and including the serverTick (acknowledged)
-        while (bufferCount > 0 && inputBuffer[bufferTail].tick <= serverTick)
+        InputEntry inputEntry = default;
+        bool found = false;
+        int currentIndex = bufferTail;
+
+        // Iterate through valid entries to find the serverTick
+        for (int i = 0; i < bufferCount; i++)
         {
-            bufferTail = (bufferTail + 1) % BUFFER_SIZE;
-            bufferCount--;
+            if (inputBuffer[currentIndex].tick == serverTick)
+            {
+                inputEntry = inputBuffer[currentIndex];
+                found = true;
+                break;
+            }
+            currentIndex = (currentIndex + 1) % BUFFER_SIZE;
         }
 
-        // If client position is off from server’s authoritative position, correct and replay
-        if (Vector3.Distance(transform.position, serverPosition) > 0.1f)
+        if (!found)
         {
-            Debug.Log("We need to reconcile");
+            Debug.LogWarning($"Reconcile failed: No input entry found for tick {serverTick}");
+            return;
+        }
 
-            // Try to rollback to predicted position of last confirmed tick if available
-            int rollbackIndex = FindInputIndexByTick(serverTick);
-            if (rollbackIndex >= 0)
-                transform.position = inputBuffer[rollbackIndex].predictedPosition;
-            else
-                transform.position = serverPosition;
+        if (Vector3.Distance(inputEntry.predictedPosition, serverPosition) > 1f)
+        {
+            Debug.Log("We need to reconcile state!");
 
-            // Replay all buffered inputs after serverTick
+            // Remove acknowledged inputs
+            while (bufferCount > 0 && inputBuffer[bufferTail].tick <= serverTick)
+            {
+                bufferTail = (bufferTail + 1) % BUFFER_SIZE;
+                bufferCount--;
+            }
+
+            // Restore state from the server's position
+            transform.position = serverPosition;
+            rb.linearVelocity = inputEntry.velocity;
+
+            // Replay unacknowledged inputs
             int current = bufferTail;
             for (int i = 0; i < bufferCount; i++)
             {
                 ref InputEntry entry = ref inputBuffer[current];
-
-                entry.predictedPosition = transform.position;
+                rb.linearVelocity = entry.velocity;
 
                 if (entry.isJump)
                     movementController.Jump();
                 else
                     movementController.UpdateMovement(entry.moveInput, Time.fixedDeltaTime);
 
+                // Update predicted state after applying each input
+                entry.predictedPosition = transform.position;
+                entry.velocity = rb.linearVelocity;
 
                 current = (current + 1) % BUFFER_SIZE;
             }
         }
-    }
-
-    // Helper: Find the index in buffer for a given tick
-    private int FindInputIndexByTick(uint tick)
-    {
-        int count = bufferCount;
-        int index = bufferTail;
-        for (int i = 0; i < count; i++)
-        {
-            if (inputBuffer[index].tick == tick)
-                return index;
-            index = (index + 1) % BUFFER_SIZE;
-        }
-        return -1;
     }
 
     private void OnLookActionPerformed(InputAction.CallbackContext context)
