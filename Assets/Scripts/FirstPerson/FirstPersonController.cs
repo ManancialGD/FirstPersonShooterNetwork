@@ -33,10 +33,6 @@ public class FirstPersonController : NetworkBehaviour
         movementController = GetComponent<FirstPersonMovement>();
         skinController = GetComponent<FirstPersonSkin>();
         rb = GetComponent<Rigidbody>();
-
-        Assert.IsNotNull(moveAction);
-        Assert.IsNotNull(lookAction);
-        Assert.IsNotNull(jumpAction);
     }
 
     private void Start()
@@ -88,12 +84,12 @@ public class FirstPersonController : NetworkBehaviour
         if (didJump)
             movementController.Jump();
 
-        movementController.UpdateMovement(moveInput, deltaTime);
+        movementController.UpdateMovement(moveInput.normalized, deltaTime);
 
         AddToBuffer(new InputEntry
         {
             tick = currentTick,
-            moveInput = moveInput,
+            moveInput = moveInput.normalized,
             isJump = didJump,
             predictedPosition = transform.position,
             velocity = rb.linearVelocity,
@@ -102,7 +98,7 @@ public class FirstPersonController : NetworkBehaviour
         if (didJump)
             JumpServerRpc(currentTick);
         else
-            MoveServerRpc(moveInput, deltaTime, currentTick);
+            MoveServerRpc(moveInput.normalized, deltaTime, currentTick);
     }
 
     private void AddToBuffer(InputEntry entry)
@@ -111,7 +107,6 @@ public class FirstPersonController : NetworkBehaviour
         {
             bufferTail = (bufferTail + 1) % BUFFER_SIZE;
             bufferCount--;
-            Debug.LogWarning("Input buffer overflow! Increase buffer size.");
         }
 
         inputBuffer[bufferHead] = entry;
@@ -122,7 +117,7 @@ public class FirstPersonController : NetworkBehaviour
     [ServerRpc]
     private void MoveServerRpc(Vector2 input, float deltaTime, uint tick)
     {
-        movementController.UpdateMovement(input, deltaTime);
+        movementController.UpdateMovement(input.normalized, deltaTime);
         MoveClientRpc(transform.position, tick);
     }
 

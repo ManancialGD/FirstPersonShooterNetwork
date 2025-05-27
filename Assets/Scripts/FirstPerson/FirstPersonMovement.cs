@@ -85,6 +85,7 @@ public class FirstPersonMovement : MonoBehaviour
 
         if (IsGrounded && !jumpCooldown)
         {
+            ApplyFriction();
             Accelerate(wishDir, wishSpeed, accelerate, deltaTime);
         }
         else
@@ -96,12 +97,6 @@ public class FirstPersonMovement : MonoBehaviour
     private void Update()
     {
         GroundCheck();
-    }
-
-    private void FixedUpdate()
-    {
-        if (IsGrounded && !jumpCooldown)
-            ApplyFriction();
     }
 
     // //           // //
