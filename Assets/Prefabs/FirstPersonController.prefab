@@ -208,8 +208,8 @@ VisualEffect:
   m_GameObject: {fileID: 2007365510400573134}
   m_Enabled: 1
   m_Asset: {fileID: 8926484042661614526, guid: ee2765a0c5972c44bad4ffd43572c57a, type: 3}
-  m_InitialEventName: OnPlay
-  m_InitialEventNameOverriden: 0
+  m_InitialEventName: 
+  m_InitialEventNameOverriden: 1
   m_StartSeed: 0
   m_ResetSeedOnPlay: 1
   m_AllowInstancing: 1
@@ -802,8 +802,8 @@ VisualEffect:
   m_GameObject: {fileID: 6516975061143127657}
   m_Enabled: 1
   m_Asset: {fileID: 8926484042661614526, guid: ee2765a0c5972c44bad4ffd43572c57a, type: 3}
-  m_InitialEventName: OnPlay
-  m_InitialEventNameOverriden: 0
+  m_InitialEventName: 
+  m_InitialEventNameOverriden: 1
   m_StartSeed: 0
   m_ResetSeedOnPlay: 1
   m_AllowInstancing: 1
@@ -1067,6 +1067,7 @@ GameObject:
   - component: {fileID: 968026213091031763}
   - component: {fileID: 70598484831049946}
   - component: {fileID: 6874245117877635230}
+  - component: {fileID: 7906487724033184263}
   - component: {fileID: 4045491328246184187}
   - component: {fileID: 3804952452668722599}
   - component: {fileID: 4281491991435776894}
@@ -1114,6 +1115,7 @@ MonoBehaviour:
   moveAction: {fileID: -1680190386980627800, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   lookAction: {fileID: -5630151704836100654, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   jumpAction: {fileID: -2099379676528639254, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  shootAction: {fileID: 1120369429361536294, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!114 &968026213091031763
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1127,7 +1129,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  cameraTarget: {fileID: 6744497679930694718}
+  <CameraTarget>k__BackingField: {fileID: 6744497679930694718}
   lookAction: {fileID: -5630151704836100654, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   senseX: 1
   senseY: 1
@@ -1188,6 +1190,24 @@ MonoBehaviour:
   - {fileID: 6282077676230518878}
   - {fileID: 930373053187511202}
   - {fileID: 4929799893570829333}
+  rb: {fileID: 3804952452668722599}
+--- !u!114 &7906487724033184263
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7375928520506187502}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 316f92911f46e504c97aa7062f915da8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  cooldown: 0.15
+  showDebugShots: 1
+  clientHitDebug: {fileID: 1970064977118563500, guid: 482b146a067cd33458b82fb50e18d997, type: 3}
+  serverHitDebug: {fileID: 1970064977118563500, guid: 7340981766080e949aae09106a038bc1, type: 3}
 --- !u!114 &4045491328246184187
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1200,6 +1220,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11cc57d4fa3cf3c499dfa26e81583c88, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
   swayMultiplier: 50
   recoilForce: 0.05
   swaySmooth: 8

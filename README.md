@@ -277,6 +277,325 @@ This is commonly known as lag compensation or server-side rewind.
 Great video that talks about this: 
 [What goes into making a multiplayer FPS game?](https://www.youtube.com/watch?v=JOH5NEErS4Y&ab_channel=RiftDivision) by Rift Division
 
+Architecture plan:
+    - FirstPersonShooter will be a class that will handle if it's possible to shoot and client-side shooting.
+    - ShotsManager will be a singleton that will manage the player's position over time, calculating the shots based on the time it was shot.
+
+### Rewinding
+What is rewinding?
+Well, rewinding is going to a given time in the past to calculate something.
+We will use this to calculate where was the client looking when they shot.
+
+#### Gathering Information:
+I opt to use a tick based buffer.
+The buffer has a size to match 1 second based on the tick rate.
+**All of this is Server-side only.**
+
+Initialized like this:
+```cs
+private void Start()
+{
+    // tick rate is default 128.
+    // This will set the buffer to contain 1 second of information.
+    bufferSize = tickRate; 
+    tickInterval = 1f / tickRate;
+}
+```
+
+Now, we update the tick like this:
+```cs
+private void Update()
+{
+    if (Time.time >= nextTickTime)
+    {
+        RecordWorldState();
+        nextTickTime = Time.time + tickInterval;
+    }
+}
+```
+
+Okay, now how we store that information?
+
+We create a class to store stuff called WorldData:
+```cs
+public class WorldData
+{
+    public float Time;
+    public Vector3 Position;
+    public Vector2 HeadRotation;
+}
+```
+
+Now we create a buffer to every client there is connected.
+And initialize it:
+```cs
+private Dictionary<ulong, WorldData>[] buffer;
+
+private void Start()
+{
+    buffer = new Dictionary<ulong, WorldData>[bufferSize];
+
+    for (int i = 0; i < bufferSize; i++)
+    {
+        buffer[i] = new Dictionary<ulong, WorldData>();
+    }
+}
+```
+
+Now we gather all clients information and store in the buffer:
+```cs
+private void RecordWorldState()
+{
+    // Clear before setting stuff up.
+    buffer[currentIndex].Clear();
+
+    foreach (ulong clientId in cachedClientIds)
+    {
+        if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+            continue;
+
+        if (!client.PlayerObject.TryGetComponent<FirstPersonCamera>(out var camera))
+            continue;
+
+        buffer[currentIndex][clientId] = new WorldData
+        {
+            Time = NetworkManager.Singleton.ServerTime.TimeAsFloat,
+            Position = client.PlayerObject.transform.position,
+            HeadRotation = camera.networkRotation.Value
+        };
+    }
+    
+    // Make it circle the buffer.
+    currentIndex = (currentIndex + 1) % bufferSize;
+}
+```
+#### Calculating the shot
+When the client press the shoot button,
+we will register the time and send it to the server.
+
+```cs
+public void Shoot()
+{
+    float time = NetworkManager.Singleton.ServerTime.TimeAsFloat;
+
+    ShootServerRpc(time);
+}
+```
+
+In the server, we will check if it's inside the cooldown  before shooting.
+
+```cs
+[ServerRpc]
+private void ShootServerRpc(float time, ServerRpcParams serverRpcParams = default)
+{
+    ulong senderClientId = serverRpcParams.Receive.SenderClientId;
+
+    if (time - lastShotTime > cooldown)
+    {
+        ShotsManager.Instance.CalculateShoot(time, senderClientId);
+        lastShotTime = time;
+    }
+}
+```
+
+Now, to rewinding we have 4 steps.
+
+Step 1: Finding the best snapshot.
+
+To get the best snapshot we will go backwards in the buffer until we find a snapshot that was taken in a time closest to the target time.
+
+```cs
+private bool TryFindBestSnapshot(float targetTime, ulong shooterId, out Dictionary<ulong, WorldData> snapshot)
+{
+    snapshot = null;
+    int newestIndex = (currentIndex - 1 + bufferSize) % bufferSize;
+
+    int closestIndex = -1;
+    float closestDiff = float.MaxValue;
+
+    // Search backwards through buffer
+    for (int i = 0; i < bufferSize; i++)
+    {
+        int bufferIndex = (newestIndex - i + bufferSize) % bufferSize;
+        var currentSnapshot = buffer[bufferIndex];
+
+        // Skip if shooter data doesn't exist in this snapshot
+        if (!currentSnapshot.TryGetValue(shooterId, out var shooterData))
+            continue;
+
+        float timeDiff = Mathf.Abs(shooterData.Time - targetTime);
+
+        // Found exact match (within 1 tick tolerance)
+        if (timeDiff < tickInterval * 0.5f)
+        {
+            closestIndex = bufferIndex;
+            break;
+        }
+
+        // Found closer match
+        if (timeDiff < closestDiff)
+        {
+            closestDiff = timeDiff;
+            closestIndex = bufferIndex;
+        }
+    }
+
+    if (closestIndex == -1) return false;
+
+    snapshot = buffer[closestIndex];
+    return true;
+}
+```
+
+Step 2: Saving the current data.
+
+In order to rewind and go back, we need the information of the NOW so we can come back once we're done.
+
+```cs
+private Dictionary<ulong, WorldData> CaptureWorldState()
+{
+    var states = new Dictionary<ulong, WorldData>();
+
+    foreach (ulong clientId in cachedClientIds)
+    {
+        if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+            continue;
+
+        if (!client.PlayerObject.TryGetComponent<FirstPersonCamera>(out var camera))
+            continue;
+
+        states[clientId] = new WorldData
+        {
+            Position = client.PlayerObject.transform.position,
+            HeadRotation = camera.networkRotation.Value
+        };
+    }
+
+    return states;
+}
+```
+
+Step 3: Rewinding.
+
+To rewind, first, let's stop Physics from running for a bit.
+Then we will set the position and head rotation from every client to the best snapshot we captured.
+Then we will make the physics simulate one step to update collisions.
+
+```cs
+private void RewindWorldToSnapshot(Dictionary<ulong, WorldData> snapshot)
+{
+    Physics.simulationMode = SimulationMode.Script;
+
+    foreach (ulong clientId in cachedClientIds)
+    {
+        if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+            continue;
+
+        if (!snapshot.TryGetValue(clientId, out var data))
+            continue;
+
+        var playerObj = client.PlayerObject;
+        playerObj.transform.position = data.Position;
+
+        if (playerObj.TryGetComponent<FirstPersonCamera>(out var camera))
+        {
+            camera.CameraTarget.rotation = Quaternion.Euler(data.HeadRotation);
+        }
+    }
+
+    Physics.Simulate(tickInterval);
+}
+```
+
+Now we can perform the shot:
+
+```cs
+private Vector3 ProcessShot(ulong shooterId)
+{
+    if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(shooterId, out var shooter))
+        return default;
+
+    if (!shooter.PlayerObject.TryGetComponent<FirstPersonCamera>(out var camera))
+        return default;
+
+    Vector3 origin = camera.CameraTarget.transform.position;
+    Vector3 direction = camera.CameraTarget.forward;
+
+    if (Physics.Raycast(origin, direction, out RaycastHit hit, 500))
+    {
+        if (hit.collider.TryGetComponent<NetworkObject>(out var hitObject))
+        {
+            ProcessHit(hitObject, shooterId);
+        }
+    }
+
+    return hit.point;
+}
+```
+
+Step 4: Going back to the present.
+
+Now we just set the position and head rotation back.
+And set physics to roll again.
+
+```cs
+private void RestoreWorldState(Dictionary<ulong, WorldData> originalStates)
+{
+    foreach (ulong clientId in cachedClientIds)
+    {
+        if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+            continue;
+
+        if (!originalStates.TryGetValue(clientId, out var data))
+            continue;
+
+        var playerObj = client.PlayerObject;
+        playerObj.transform.position = data.Position;
+
+        if (playerObj.TryGetComponent<FirstPersonCamera>(out var camera))
+        {
+            camera.CameraTarget.rotation = Quaternion.Euler(data.HeadRotation);
+        }
+    }
+
+    Physics.simulationMode = SimulationMode.FixedUpdate;
+}
+```
+
+Now we will also make the shot in the client to predict what the server will get:
+
+```cs
+public void Shoot()
+{
+    float time = NetworkManager.Singleton.ServerTime.TimeAsFloat;
+
+    if (time - lastShotTime > cooldown)
+    {
+        lastShotTime = time;
+
+        var cameraController = GetComponent<FirstPersonCamera>();
+
+        Vector3 origin = cameraController.CameraTarget.transform.position;
+        Vector3 direction = cameraController.CameraTarget.forward;
+
+        if (Physics.Raycast(origin, direction, out RaycastHit hit, 500))
+        {
+            if (clientHitDebug != null && showDebugShots)
+            {
+                var hitMarker = Instantiate(clientHitDebug, hit.point, Quaternion.identity);
+                Destroy(hitMarker, 2f);
+            }
+        }
+    }
+}
+```
+
+Results:
+Walking left, no head movement
+Green client bullet
+Red server bullet
+![Rewind result example](Images/RewindResult1.png)]
+
 ## Remote and Local meshes (skins)
 
 ## IK

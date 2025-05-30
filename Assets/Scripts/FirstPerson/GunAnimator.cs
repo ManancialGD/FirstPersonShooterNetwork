@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.VFX;
 
-public class GunAnimator : MonoBehaviour
+public class GunAnimator : NetworkBehaviour
 {
     [SerializeField] private float swayMultiplier = 0.15f;
     [SerializeField] private float recoilForce = 2.5f;
@@ -41,14 +41,7 @@ public class GunAnimator : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Mouse0) && playerController.IsLocalPlayer)
-        {
-            localMuzzleFlashVFX?.Play();
-
-            Recoil();
-        }
-
-        if (playerController?.IsLocalPlayer == false) return;
+        if (!IsLocalPlayer) return;
 
         MakeSway();
         MakeBob();
@@ -62,6 +55,23 @@ public class GunAnimator : MonoBehaviour
         {
             gunHolder.transform.localPosition = originalPosition;
         }
+    }
+
+    public void Shoot()
+    {
+        if (IsOwner)
+        {
+            localMuzzleFlashVFX?.Play();
+
+            Recoil();
+        }
+    }
+
+    [ClientRpc(RequireOwnership = false)]
+    public void ShootClientRpc()
+    {
+        if (!IsOwner)
+            remoteMuzzleFlashVFX?.Play();
     }
 
     private void MakeSway()

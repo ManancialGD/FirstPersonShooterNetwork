@@ -21,11 +21,10 @@ public class FirstPersonSkin : NetworkBehaviour
     [SerializeField]
     private Renderer[] serverMeshes;
 
-    private Rigidbody rb;
+    [SerializeField] private Rigidbody rb;
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
         if (anim == null)
         {
             Debug.LogError("Animator component is not assigned in FirstPersonSkin.");
@@ -91,7 +90,7 @@ public class FirstPersonSkin : NetworkBehaviour
         Vector3 flatForward = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
         Vector3 flatRight = Vector3.ProjectOnPlane(cam.transform.right, Vector3.up).normalized;
 
-        Vector3 flatVelocity = Vector3.ProjectOnPlane(rb.linearVelocity, Vector3.up).normalized;
+        Vector3 flatVelocity = new(rb.linearVelocity.x, 0, rb.linearVelocity.y);
 
         float forwardValue = Vector3.Dot(flatVelocity, flatForward);
         float horizontalValue = Vector3.Dot(flatVelocity, flatRight);

@@ -12,10 +12,12 @@ public class FirstPersonController : NetworkBehaviour
     [SerializeField] private InputActionReference moveAction;
     [SerializeField] private InputActionReference lookAction;
     [SerializeField] private InputActionReference jumpAction;
+    [SerializeField] private InputActionReference shootAction;
 
     private FirstPersonCamera cameraController;
     private FirstPersonMovement movementController;
     private FirstPersonSkin skinController;
+    private FirstPersonShooter shootingController;
     private Rigidbody rb;
 
     private uint currentTick = 0;
@@ -32,6 +34,7 @@ public class FirstPersonController : NetworkBehaviour
         cameraController = GetComponentInChildren<FirstPersonCamera>();
         movementController = GetComponent<FirstPersonMovement>();
         skinController = GetComponent<FirstPersonSkin>();
+        shootingController = GetComponent<FirstPersonShooter>();
         rb = GetComponent<Rigidbody>();
     }
 
@@ -43,6 +46,7 @@ public class FirstPersonController : NetworkBehaviour
         if (IsClient && !IsOwner)
         {
             GetComponentInChildren<CinemachineCamera>()?.gameObject.SetActive(false);
+            rb.isKinematic = true;
         }
 
         if (!IsServer)
@@ -62,6 +66,14 @@ public class FirstPersonController : NetworkBehaviour
     {
         skinController.UpdateSkin();
         skinController.UpdateAnimation();
+
+        if (IsOwner)
+        {
+            if (shootAction.action.IsPressed())
+            {
+                shootingController.Shoot();
+            }
+        }
     }
 
     private void FixedUpdate()

@@ -8,7 +8,7 @@ public class FirstPersonCamera : NetworkBehaviour
     [Header("Camera Settings")]
     [Header("Camera Target")]
     [Tooltip("The target transform the camera will follow and rotate around.")]
-    [SerializeField] private Transform cameraTarget;
+    [field: SerializeField] public Transform CameraTarget { get; private set; }
 
     [Header("Input Settings")]
     [Tooltip("The input action reference for looking around.")]
@@ -33,7 +33,7 @@ public class FirstPersonCamera : NetworkBehaviour
     private float yaw;
     private float pitch;
 
-    private readonly NetworkVariable<Vector2> networkRotation = new(
+    public readonly NetworkVariable<Vector2> networkRotation = new(
         Vector2.zero,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Owner
@@ -65,14 +65,14 @@ public class FirstPersonCamera : NetworkBehaviour
     {
         if (!IsOwner)
         {
-            cameraTarget.localRotation = Quaternion.Euler(newValue.x, newValue.y, 0f);
+            CameraTarget.localRotation = Quaternion.Euler(newValue.x, newValue.y, 0f);
         }
     }
 
     public void UpdateView(Vector2 lookInput)
     {
         if (!IsOwner) return;
-        if (cameraTarget == null) return;
+        if (CameraTarget == null) return;
 
         if (lookInput == Vector2.zero)
             return;
@@ -87,7 +87,7 @@ public class FirstPersonCamera : NetworkBehaviour
         pitch = Mathf.Clamp(pitch, -maxAngleDown, maxAngleUp);
 
         // Apply rotation: yaw on Y, pitch on X
-        cameraTarget.localRotation = Quaternion.Euler(pitch, yaw, 0f);
+        CameraTarget.localRotation = Quaternion.Euler(pitch, yaw, 0f);
 
         networkRotation.Value = new Vector2(pitch, yaw);
     }
