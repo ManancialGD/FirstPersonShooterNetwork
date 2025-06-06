@@ -2,11 +2,12 @@ using System;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Assertions;
 using Unity.Cinemachine;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
-[RequireComponent(typeof(FirstPersonCamera), typeof(FirstPersonMovement), typeof(FirstPersonSkin))]
+[RequireComponent(typeof(FirstPersonCamera), typeof(FirstPersonMovement), typeof(FirstPersonSkin)),
+ RequireComponent(typeof(HealthModule), typeof(FirstPersonShooter))]
 public class FirstPersonController : NetworkBehaviour
 {
     [SerializeField] private InputActionReference moveAction;
@@ -19,6 +20,7 @@ public class FirstPersonController : NetworkBehaviour
     private FirstPersonSkin skinController;
     private FirstPersonShooter shootingController;
     private Rigidbody rb;
+    private HealthModule healthModule;
 
     private uint currentTick = 0;
 
@@ -36,6 +38,7 @@ public class FirstPersonController : NetworkBehaviour
         skinController = GetComponent<FirstPersonSkin>();
         shootingController = GetComponent<FirstPersonShooter>();
         rb = GetComponent<Rigidbody>();
+        healthModule = GetComponent<HealthModule>();
     }
 
     private void Start()
@@ -55,6 +58,7 @@ public class FirstPersonController : NetworkBehaviour
         if (IsOwner)
         {
             skinController.InitiateLocal();
+            healthModule.Died += OnDied;
         }
         else
         {
@@ -64,6 +68,9 @@ public class FirstPersonController : NetworkBehaviour
 
     private void Update()
     {
+        if (healthModule.IsDead)
+            return;
+
         skinController.UpdateSkin();
         skinController.UpdateAnimation();
 
@@ -78,7 +85,7 @@ public class FirstPersonController : NetworkBehaviour
 
     private void FixedUpdate()
     {
-        if (IsOwner)
+        if (IsOwner && !healthModule.IsDead)
         {
             ProcessMovementInput();
             currentTick++;
@@ -129,6 +136,8 @@ public class FirstPersonController : NetworkBehaviour
     [ServerRpc]
     private void MoveServerRpc(Vector2 input, float deltaTime, uint tick)
     {
+        if (healthModule.IsDead)
+            return;
         movementController.UpdateMovement(input.normalized, deltaTime);
         MoveClientRpc(transform.position, tick);
     }
@@ -138,6 +147,21 @@ public class FirstPersonController : NetworkBehaviour
     {
         if (!IsOwner) return;
         ReconcileState(serverPosition, serverTick);
+    }
+
+    [ClientRpc(RequireOwnership = false)]
+    public void ResetInputBufferClientRpc()
+    {
+        if (!IsOwner) return;
+
+        bufferHead = 0;
+        bufferTail = 0;
+        bufferCount = 0;
+
+        for (int i = 0; i < BUFFER_SIZE; i++)
+        {
+            inputBuffer[i] = default;
+        }
     }
 
     [ServerRpc]
@@ -217,7 +241,17 @@ public class FirstPersonController : NetworkBehaviour
     private void OnLookActionPerformed(InputAction.CallbackContext context)
     {
         Vector2 v = context.ReadValue<Vector2>();
-        cameraController.UpdateView(v);
+
+        if (!healthModule.IsDead)
+            cameraController.UpdateView(v);
+    }
+
+    private void OnDied()
+    {
+        if (IsOwner)
+        {
+            skinController.InitiateRemote();
+        }
     }
 
     private void OnJumpActionPerformed(InputAction.CallbackContext context)

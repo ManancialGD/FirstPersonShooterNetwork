@@ -8,6 +8,9 @@ public class ShotsManager : MonoBehaviour
     [Header("Settings")]
     [SerializeField] private int tickRate = 128;
 
+    [SerializeField] private LayerMask worldLayerMask;
+    [SerializeField] private LayerMask ragdollLayerMask;
+
     private int bufferSize;
     private float tickInterval;
     private float nextTickTime;
@@ -68,11 +71,8 @@ public class ShotsManager : MonoBehaviour
     {
         if (!NetworkManager.Singleton.IsServer) return default;
 
-        Debug.Log($"[ShotsManager] CalculateShoot called with time={shotTime}, shooterID={shooterId}");
-
         if (!TryFindBestSnapshot(shotTime, shooterId, out var snapshot))
         {
-            Debug.LogWarning("[ShotsManager] No valid snapshot found for shooter");
             return default;
         }
 
@@ -98,11 +98,16 @@ public class ShotsManager : MonoBehaviour
 
     private void RecordWorldState()
     {
+        if (cachedClientIds?.Length == 0 || cachedClientIds == null)
+            return;
+
         buffer[currentIndex].Clear();
 
         foreach (ulong clientId in cachedClientIds)
         {
             if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+                continue;
+            if (client.PlayerObject == null)
                 continue;
 
             if (!client.PlayerObject.TryGetComponent<FirstPersonCamera>(out var camera))
@@ -218,13 +223,16 @@ public class ShotsManager : MonoBehaviour
         Vector3 origin = camera.CameraTarget.transform.position;
         Vector3 direction = camera.CameraTarget.forward;
 
-        if (Physics.Raycast(origin, direction, out RaycastHit hit, 500))
-        {
-            Debug.Log($"[ShotsManager] Shot hit: {hit.collider.gameObject.name} at {hit.point}");
+        LayerMask layerMask = worldLayerMask | ragdollLayerMask;
 
-            if (hit.collider.TryGetComponent<NetworkObject>(out var hitObject))
+        if (Physics.Raycast(origin, direction, out RaycastHit hit, 500, layerMask))
+        {
+            if (hit.collider.TryGetComponent(out RagDollLimb hitObject))
             {
-                ProcessHit(hitObject, shooterId);
+                if (hitObject.GetComponentInParent<NetworkObject>()?.OwnerClientId != shooterId)
+                {
+                    hitObject.Damage(hit.point, direction);
+                }
             }
         }
 
@@ -251,10 +259,5 @@ public class ShotsManager : MonoBehaviour
         }
 
         Physics.simulationMode = SimulationMode.FixedUpdate;
-    }
-
-    private void ProcessHit(NetworkObject hitObject, ulong shooterId)
-    {
-
     }
 }

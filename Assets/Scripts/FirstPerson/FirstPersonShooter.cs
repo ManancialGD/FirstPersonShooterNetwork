@@ -20,7 +20,6 @@ public class FirstPersonShooter : NetworkBehaviour
     public void Shoot()
     {
         float time = NetworkManager.Singleton.ServerTime.TimeAsFloat;
-        Debug.Log($"[FirstPersonShooter] Shoot called at time: {time}");
 
         if (time - lastShotTime > cooldown)
         {
@@ -35,7 +34,7 @@ public class FirstPersonShooter : NetworkBehaviour
 
             if (Physics.Raycast(origin, direction, out RaycastHit hit, 500))
             {
-                Debug.Log($"[FirstPersonShooter] Shot hit: {hit.collider.gameObject.name} at {hit.point}");
+                // Debug.Log($"[FirstPersonShooter] Shot hit: {hit.collider.gameObject.name} at {hit.point}");
 
                 if (clientHitDebug != null && showDebugShots)
                 {
@@ -50,10 +49,10 @@ public class FirstPersonShooter : NetworkBehaviour
     private void ShootServerRpc(float time, ServerRpcParams serverRpcParams = default)
     {
         ulong senderClientId = serverRpcParams.Receive.SenderClientId;
-        Debug.Log($"[FirstPersonShooter] ShootRpc called. Time: {time}, LastShotTime: {lastShotTime}, SenderClientId: {senderClientId}");
+        // Debug.Log($"[FirstPersonShooter] ShootRpc called. Time: {time}, LastShotTime: {lastShotTime}, SenderClientId: {senderClientId}");
         if (time - lastShotTime > cooldown)
         {
-            Debug.Log("[FirstPersonShooter] Cooldown passed, calculating shot.");
+            // Debug.Log("[FirstPersonShooter] Cooldown passed, calculating shot.");
             gunAnimator.ShootClientRpc();
             Vector3 hitPos = ShotsManager.Instance.CalculateShoot(time, senderClientId);
             lastShotTime = time;
@@ -61,7 +60,7 @@ public class FirstPersonShooter : NetworkBehaviour
         }
         else
         {
-            Debug.Log("[FirstPersonShooter] Cooldown not passed, shot ignored.");
+            // Debug.Log("[FirstPersonShooter] Cooldown not passed, shot ignored.");
         }
     }
 
@@ -70,7 +69,7 @@ public class FirstPersonShooter : NetworkBehaviour
     {
         if (serverHitDebug != null && showDebugShots)
         {
-            Debug.Log($"[FirstPersonShooter] Server hit at position: {position}");
+            // Debug.Log($"[FirstPersonShooter] Server hit at position: {position}");
             var hitMarker = Instantiate(serverHitDebug, position, Quaternion.identity);
             Destroy(hitMarker, 2f);
         }

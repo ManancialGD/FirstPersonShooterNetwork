@@ -55,6 +55,15 @@ public class FirstPersonSkin : NetworkBehaviour
         }
     }
 
+    [ClientRpc(RequireOwnership = false)]
+    public void InitiateLocalClientRpc()
+    {
+        if (IsOwner)
+        {
+            InitiateLocal();
+        }
+    }
+
     public void InitiateRemote()
     {
         if (clientMeshes != null && clientMeshes.Length > 0)
