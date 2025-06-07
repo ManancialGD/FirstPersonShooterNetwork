@@ -3,6 +3,7 @@ using Unity.Netcode;
 using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
+using NUnit.Framework;
 
 public class DeathMatchMaster : MonoBehaviour
 {
@@ -15,38 +16,58 @@ public class DeathMatchMaster : MonoBehaviour
 
     private bool ready = false;
 
-    private IEnumerator Start()
+    private void Start()
     {
-        yield return null;
-        yield return null;
-        yield return null;
-
-        if (!IsServer)
-            yield break;
-
-        registeredClients = new HashSet<ulong>();
-        Debug.Log("[DeathMatchMaster] Server started. Ready to register clients.");
-        ready = true;
+        var setup = FindAnyObjectByType<NetworkSetup>();
+        if (setup != null)
+        {
+            setup.Connect += OnConnect;
+        }
     }
 
-    private void Update()
+    private void OnConnect()
+    {
+        registeredClients = new HashSet<ulong>();
+
+        Debug.Log("[DeathMatchMaster] Server started. Ready to register clients.");
+
+        ready = true;
+
+        NetworkManager.Singleton.OnClientConnectedCallback += OnClientEnter;
+        NetworkManager.Singleton.OnClientDisconnectCallback += OnClientExit;
+    }
+
+    private void OnClientEnter(ulong clientId)
     {
         if (!IsServer || !ready) return;
 
-        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+        if (registeredClients.Contains(clientId))
         {
-            if (client.PlayerObject != null && !registeredClients.Contains(client.ClientId))
-            {
-                Debug.Log($"[DeathMatchMaster] Registering client {client.ClientId}.");
-                RegisterClientEvent(client.ClientId);
-            }
+            Debug.LogWarning($"[DeathMatchMaster] Client {clientId} is already registered.");
+            return;
+        }
+
+        Debug.Log($"[DeathMatchMaster] Client {clientId} has entered. Registering.");
+        RegisterClientEvent(clientId);
+    }
+
+    private void OnClientExit(ulong clientId)
+    {
+        if (!IsServer || !ready) return;
+
+        if (registeredClients.Contains(clientId))
+        {
+            registeredClients.Remove(clientId);
+            Debug.Log($"[DeathMatchMaster] Unregistered client {clientId}.");
+        }
+        else
+        {
+            Debug.LogWarning($"[DeathMatchMaster] Client {clientId} was not registered.");
         }
     }
 
     private void RegisterClientEvent(ulong clientId)
     {
-        if (!IsServer) return;
-
         if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
         {
             Debug.LogWarning($"[DeathMatchMaster] Client {clientId} not found in ConnectedClients.");

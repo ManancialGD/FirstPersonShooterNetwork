@@ -7,14 +7,17 @@ public class FirstPersonShooter : NetworkBehaviour
     [SerializeField] private bool showDebugShots = true;
     [SerializeField] private GameObject clientHitDebug;
     [SerializeField] private GameObject serverHitDebug;
+    [SerializeField] private AudioSource shootSound;
 
     private GunAnimator gunAnimator;
+    private HealthModule healthModule;
 
     private float lastShotTime = 0;
 
     private void Awake()
     {
         gunAnimator = GetComponent<GunAnimator>();
+        healthModule = GetComponent<HealthModule>();
     }
 
     public void Shoot()
@@ -24,6 +27,9 @@ public class FirstPersonShooter : NetworkBehaviour
         if (time - lastShotTime > cooldown)
         {
             ShootServerRpc(time);
+            if (shootSound != null && shootSound.clip != null)
+                shootSound.Play();
+
             gunAnimator.Shoot();
             lastShotTime = time;
 
@@ -48,12 +54,20 @@ public class FirstPersonShooter : NetworkBehaviour
     [ServerRpc]
     private void ShootServerRpc(float time, ServerRpcParams serverRpcParams = default)
     {
+        // if (healthModule?.IsDead == true)
+        //     return;
+
         ulong senderClientId = serverRpcParams.Receive.SenderClientId;
+
+        // if (time > NetworkManager.Singleton.ServerTime.TimeAsFloat)
+        //     return;
+        
         // Debug.Log($"[FirstPersonShooter] ShootRpc called. Time: {time}, LastShotTime: {lastShotTime}, SenderClientId: {senderClientId}");
         if (time - lastShotTime > cooldown)
         {
             // Debug.Log("[FirstPersonShooter] Cooldown passed, calculating shot.");
             gunAnimator.ShootClientRpc();
+            ShootClientRpc();
             Vector3 hitPos = ShotsManager.Instance.CalculateShoot(time, senderClientId);
             lastShotTime = time;
             CreateDebugHitClientRpc(hitPos);
@@ -62,6 +76,14 @@ public class FirstPersonShooter : NetworkBehaviour
         {
             // Debug.Log("[FirstPersonShooter] Cooldown not passed, shot ignored.");
         }
+    }
+
+    [ClientRpc]
+    private void ShootClientRpc()
+    {
+        if (IsOwner) return;
+        if (shootSound != null && shootSound.clip != null)
+            shootSound.Play();
     }
 
     [ClientRpc]

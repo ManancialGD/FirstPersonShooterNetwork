@@ -8,7 +8,6 @@ public class RagDollLimb : MonoBehaviour
 
     public void Damage(Vector3 hitPos, Vector3 direction)
     {
-        Debug.Log("HIT");
         Hit?.Invoke(this, hitPos, direction);
     }
 }

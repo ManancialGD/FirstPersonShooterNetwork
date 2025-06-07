@@ -590,23 +590,44 @@ public void Shoot()
 }
 ```
 
-Results:
-Walking left, no head movement
-Green client bullet
-Red server bullet
-![Rewind result example](Images/RewindResult1.png)]
+Results:<br>
+Walking left, no head movement<br>
+Green client bullet<br>
+Red server bullet<br>
+![Rewind result example](Images/RewindResult1.png)
 
-## Remote and Local meshes (skins)
+---
 
-## IK
+# Results
 
-### Local IK
+I made some tests with my friend, and here's what I got:<br>
 
-### Remote IK
+## Movement
+
+Very laggy, my try to make the client-side prediction has something that is not working well
+the movement it jittery without reconciliation and feels laggy.
+maybe the server should predict the client's position to move it, but the friction would need a rework.
+
+## Shooting
+
+Shooting rewind is not working correctly. Shots often don't hit when it should...<br>
+Maybe it's because of the client position not being the server position when the shot calculation ends.<br>
+Or because it's taking too much time rewinding, making the time pass and the tick register the rewinded position.
+Also, when shooting the movement glitches and lags a lot for everyone and everyone reconciles.
+
+<br>
+<br>
+Lastly, I think I learned a lot and looking back to the stuff I wrote, I would do stuff completly different.
 
 ---
 
 # References
+
+## Models
+- [lofi ordinary man](https://stephrobertgames.itch.io/lofi-ordinary-man)
+- [Low Poly Desert Building](https://lowpolyassets.itch.io/low-poly-desert-buildings)
+- [Guns Asset Pack](https://styloo.itch.io/guns-asset-pack)
+- [Free VFX image sequences and flipbooks](https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks)
 
 ## Movement
 - [Okay, but how does airstrafing ACTUALLY work?](https://www.youtube.com/watch?v=gRqoXy-0d84&ab_channel=zweek)
