@@ -621,11 +621,6 @@ Maybe it's because of the client position not being the server position when the
 Or because it's taking too much time rewinding, making the time pass and the tick register the rewinded position.
 Also, when shooting the movement glitches and lags a lot for everyone and everyone reconciles.
 
-## Analysis
-
-I tried to get the bytes sent and received per second from the profiler, but couldn't get it.
-per tick was average 
-
 <br>
 <br>
 Lastly, I think I learned a lot and looking back to the stuff I wrote, I would do stuff completly different.
