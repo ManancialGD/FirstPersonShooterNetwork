@@ -3,6 +3,7 @@
 Author : Breno Pinto 22308986
 
 ---
+
 # First Person Controller
 
 ## Code Architecture
@@ -11,6 +12,11 @@ Author : Breno Pinto 22308986
 - **FirstPersonMovement**: Handles Quake-inspired movement, jumping, and ground detection.
 - **FirstPersonCamera**: Manages camera rotation, sensitivity, and network synchronization.
 - **FirstPersonSkin**: Handles mesh visibility, animation, and local/remote differentiation.
+
+## Network Diagram
+
+![Relay Diagram](Images/RelayDiagram.png)
+
 
 ## Networked Movement System
 
@@ -614,6 +620,11 @@ Shooting rewind is not working correctly. Shots often don't hit when it should..
 Maybe it's because of the client position not being the server position when the shot calculation ends.<br>
 Or because it's taking too much time rewinding, making the time pass and the tick register the rewinded position.
 Also, when shooting the movement glitches and lags a lot for everyone and everyone reconciles.
+
+## Analysis
+
+I tried to get the bytes sent and received per second from the profiler, but couldn't get it.
+per tick was average 
 
 <br>
 <br>
